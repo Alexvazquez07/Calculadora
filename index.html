@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora (5 dígitos)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Calculadora Entera</h1>
+    <p class="subtitle">Solo suma, resta, multiplicación y potencias. Entradas entre <strong>-99999</strong> y <strong>99999</strong>.</p>
+
+    <form id="calcForm" novalidate>
+      <div class="field">
+        <label for="numA">Primer número (entero [-99999..99999])</label>
+        <input type="number" id="numA" step="1" min="-99999" max="99999" required placeholder="Ej: 125" />
+      </div>
+
+      <div class="field">
+        <label for="operacion">Operación permitida</label>
+        <select id="operacion">
+          <option value="suma">Suma (+)</option>
+          <option value="resta">Resta (-)</option>
+          <option value="multiplicacion">Multiplicación (*)</option>
+          <option value="potencia">Potencia (^)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="numB">Segundo número (entero [-99999..99999])</label>
+        <input type="number" id="numB" step="1" min="-99999" max="99999" required placeholder="Ej: 4" />
+      </div>
+
+      <button type="submit">Calcular</button>
+    </form>
+
+    <section class="result-box" aria-live="polite">
+      <div class="result-label">Resultado</div>
+      <div id="salida" class="result-value">Esperando datos...</div>
+      <div id="expresion" class="meta"></div>
+    </section>
+  </main>
+
+  <script>
+    const MIN_VALOR = -99999;
+    const MAX_VALOR = 99999;
+
+    const form = document.getElementById("calcForm");
+    const inputA = document.getElementById("numA");
+    const inputB = document.getElementById("numB");
+    const selectOp = document.getElementById("operacion");
+    const salida = document.getElementById("salida");
+    const expresion = document.getElementById("expresion");
+
+    function parsearEnteroCincoDigitos(valorStr, nombreCampo) {
+      const limpio = valorStr.trim();
+      if (!/^-?\d+$/.test(limpio)) {
+        throw new Error(`${nombreCampo} debe ser un número entero sin decimales.`);
+      }
+      const numero = Number(limpio);
+      if (!Number.isSafeInteger(numero) || numero < MIN_VALOR || numero > MAX_VALOR) {
+        throw new Error(`${nombreCampo} debe estar entre ${MIN_VALOR} y ${MAX_VALOR} (máximo 5 dígitos).`);
+      }
+      return numero;
+    }
+
+    function calcularOperacion(a, b, op) {
+      const bigA = BigInt(a);
+      const bigB = BigInt(b);
+
+      switch (op) {
+        case "suma":
+          return { texto: (bigA + bigB).toString(), expr: `${a} + ${b}` };
+        case "resta":
+          return { texto: (bigA - bigB).toString(), expr: `${a} - ${b}` };
+        case "multiplicacion":
+          return { texto: (bigA * bigB).toString(), expr: `${a} * ${b}` };
+        case "potencia":
+          if (bigA === 0n && bigB < 0n) {
+            throw new Error("0 elevado a un exponente negativo no está definido.");
+          }
+          if (bigB < 0n) {
+            if (bigA === 1n) return { texto: "1", expr: `${a} ^ (${b})` };
+            if (bigA === -1n) return { texto: (bigB % 2n === 0n ? "1" : "-1"), expr: `${a} ^ (${b})` };
+            throw new Error("En enteros, un exponente negativo distinto de 1/-1 no produce un entero exacto.");
+          }
+          return { texto: (bigA ** bigB).toString(), expr: `${a} ^ ${b}` };
+        default:
+          throw new Error("Operación no permitida.");
+      }
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      expresion.textContent = "";
+
+      try {
+        const a = parsearEnteroCincoDigitos(inputA.value, "El primer número");
+        const b = parsearEnteroCincoDigitos(inputB.value, "El segundo número");
+        const { texto, expr } = calcularOperacion(a, b, selectOp.value);
+
+        salida.className = "result-value";
+        salida.textContent = texto;
+        expresion.textContent = `Expresión: ${expr}`;
+      } catch (err) {
+        salida.className = "error";
+        salida.textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>
